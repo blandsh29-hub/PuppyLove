@@ -189,89 +189,7 @@
                 onClick: props.onClick
             }, h('polyline', { points: '15 18 9 12 15 6' }));
 
-            // ADOPTION PETS DATA
-            const adoptionPets = [
-              {
-                id: 1,
-                name: "Bella",
-                type: "dog",
-                breed: "Labrador Retriever Mix",
-                age: 2,
-                size: "large",
-                distance: "2 miles",
-                image: "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=800&q=80",
-                description: "Bella is sweet and energetic! Loves swimming and fetch. House-trained and great with kids.",
-                traits: ["House-trained", "Good with kids", "Loves water", "Active"],
-                shelter: "Virginia Beach SPCA",
-                phone: "(757) 427-0070",
-                address: "3040 Holland Rd, Virginia Beach, VA",
-                fee: "$150"
-              },
-              {
-                id: 2,
-                name: "Max",
-                type: "dog",
-                breed: "German Shepherd",
-                age: 3,
-                size: "large",
-                distance: "8 miles",
-                image: "https://images.unsplash.com/photo-1568572933382-74d440642117?w=800&q=80",
-                description: "Loyal and intelligent. Knows commands and walks beautifully on leash.",
-                traits: ["Trained", "Loyal", "Smart", "Needs experienced owner"],
-                shelter: "Norfolk Animal Care",
-                phone: "(757) 441-5505",
-                address: "5585 Sabre Rd, Norfolk, VA",
-                fee: "$125"
-              },
-              {
-                id: 3,
-                name: "Whiskers",
-                type: "cat",
-                breed: "Domestic Shorthair",
-                age: 1,
-                size: "small",
-                distance: "5 miles",
-                image: "https://images.unsplash.com/photo-1574158622682-e40e69881006?w=800&q=80",
-                description: "Playful kitten who loves toys and cuddles. Perfect lap cat!",
-                traits: ["Playful", "Affectionate", "Indoor", "Litter trained"],
-                shelter: "Virginia Beach SPCA",
-                phone: "(757) 427-0070",
-                address: "3040 Holland Rd, Virginia Beach, VA",
-                fee: "$75"
-              },
-              {
-                id: 4,
-                name: "Luna",
-                type: "dog",
-                breed: "Pit Bull Mix",
-                age: 1,
-                size: "medium",
-                distance: "12 miles",
-                image: "https://images.unsplash.com/photo-1600804931749-2da4ce26c869?w=800&q=80",
-                description: "Total sweetheart! Loves cuddles and toys. Great with other dogs!",
-                traits: ["Affectionate", "Playful", "Good with dogs", "Sweet"],
-                shelter: "Chesapeake Humane Society",
-                phone: "(757) 487-5017",
-                address: "800 S Military Hwy, Chesapeake, VA",
-                fee: "$100"
-              },
-              {
-                id: 5,
-                name: "Mittens",
-                type: "cat",
-                breed: "Tabby",
-                age: 8,
-                size: "small",
-                distance: "6 miles",
-                image: "https://images.unsplash.com/photo-1592194996308-7b43878e84a6?w=800&q=80",
-                description: "Calm senior cat looking for quiet home. Loves naps and gentle pets.",
-                traits: ["Calm", "Senior", "Quiet", "Independent"],
-                shelter: "Norfolk Animal Care",
-                phone: "(757) 441-5505",
-                address: "5585 Sabre Rd, Norfolk, VA",
-                fee: "$50"
-              }
-            ];
+            // ADOPTION PETS - Will be fetched from API
 
             // PLAYDATE PROFILES DATA
             const playdateProfiles = [
@@ -367,11 +285,39 @@
               const [dragStart, setDragStart] = useState(null);
               const [dragOffset, setDragOffset] = useState(0);
               
+              // API state
+              const [adoptionPets, setAdoptionPets] = useState([]);
+              const [loading, setLoading] = useState(true);
+              const [error, setError] = useState(null);
+              
               const [filters, setFilters] = useState({
                 type: 'all',
                 size: 'all',
                 age: 'all'
               });
+
+              // Fetch adoption pets from API
+              useEffect(() => {
+                async function fetchPets() {
+                  try {
+                    setLoading(true);
+                    setError(null);
+                    const response = await fetch('/api/pets');
+                    if (!response.ok) throw new Error('Failed to fetch pets');
+                    const data = await response.json();
+                    setAdoptionPets(data);
+                  } catch (err) {
+                    console.error('Error fetching pets:', err);
+                    setError(err.message);
+                  } finally {
+                    setLoading(false);
+                  }
+                }
+                
+                if (mode === 'adopt') {
+                  fetchPets();
+                }
+              }, [mode]);
 
               const currentData = mode === 'adopt' ? adoptionPets : playdateProfiles;
               
@@ -771,6 +717,21 @@
                 
                 // Card Area
                 h('div', { style: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', minHeight: '600px' } },
+                  loading && mode === 'adopt' ?
+                    h('div', { style: { background: 'white', borderRadius: '24px', padding: '50px 30px', textAlign: 'center', maxWidth: '400px' } },
+                      h('div', { style: { fontSize: '48px', marginBottom: '20px', animation: 'pulse 1.5s ease-in-out infinite' } }, '🐾'),
+                      h('h2', { style: { fontSize: '22px', color: 'hsl(var(--muted-foreground))' } }, 'Loading adorable pets...')
+                    ) :
+                  error && mode === 'adopt' ?
+                    h('div', { style: { background: 'white', borderRadius: '24px', padding: '50px 30px', textAlign: 'center', maxWidth: '400px' } },
+                      h('div', { style: { fontSize: '48px', marginBottom: '20px' } }, '😢'),
+                      h('h2', { style: { fontSize: '22px', marginBottom: '12px' } }, 'Oops!'),
+                      h('p', { style: { color: 'hsl(var(--muted-foreground))', marginBottom: '20px' } }, 'Failed to load pets. Please try again.'),
+                      h('button', {
+                        onClick: () => window.location.reload(),
+                        className: 'btn-primary'
+                      }, 'Retry')
+                    ) :
                   noMore ?
                     h('div', { style: { background: 'white', borderRadius: '24px', padding: '50px 30px', textAlign: 'center', alignSelf: 'center', maxWidth: '400px' } },
                       h('div', { style: { fontSize: '64px', marginBottom: '20px' } }, '🎉'),
