@@ -1,12 +1,60 @@
-import { createClient } from '@supabase/supabase-js';
-import { withRateLimit } from './rateLimit.js';
+const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-async function handler(event, context) {
+// Simple in-memory rate limiter
+const rateLimits = new Map();
+
+function checkRateLimit(ip, maxRequests = 100, windowMs = 60000) {
+  const now = Date.now();
+  const key = `limit:${ip}`;
+  
+  let limitData = rateLimits.get(key);
+  
+  if (!limitData || now - limitData.resetTime > windowMs) {
+    limitData = { count: 1, resetTime: now + windowMs };
+    rateLimits.set(key, limitData);
+    return { allowed: true, remaining: maxRequests - 1, resetTime: limitData.resetTime };
+  }
+  
+  if (limitData.count < maxRequests) {
+    limitData.count++;
+    return { allowed: true, remaining: maxRequests - limitData.count, resetTime: limitData.resetTime };
+  }
+  
+  return { allowed: false, remaining: 0, resetTime: limitData.resetTime };
+}
+
+exports.handler = async (event, context) => {
+  // Get client IP
+  const clientIP = event.headers['x-nf-client-connection-ip'] || 
+                   event.headers['x-forwarded-for']?.split(',')[0] ||
+                   'unknown';
+
+  // Check rate limit
+  const { allowed, remaining, resetTime } = checkRateLimit(clientIP);
+  
+  if (!allowed) {
+    return {
+      statusCode: 429,
+      headers: {
+        'Content-Type': 'application/json',
+        'Retry-After': Math.ceil((resetTime - Date.now()) / 1000).toString(),
+        'X-RateLimit-Limit': '100',
+        'X-RateLimit-Remaining': '0',
+        'X-RateLimit-Reset': new Date(resetTime).toISOString()
+      },
+      body: JSON.stringify({
+        error: 'Too Many Requests',
+        message: 'Rate limit exceeded. Please try again later.',
+        retryAfter: Math.ceil((resetTime - Date.now()) / 1000)
+      })
+    };
+  }
+
   // Only allow GET requests
   if (event.httpMethod !== 'GET') {
     return {
@@ -70,7 +118,10 @@ async function handler(event, context) {
       statusCode: 200,
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=300' // Cache for 5 minutes
+        'Cache-Control': 'public, max-age=300',
+        'X-RateLimit-Limit': '100',
+        'X-RateLimit-Remaining': remaining.toString(),
+        'X-RateLimit-Reset': new Date(resetTime).toISOString()
       },
       body: JSON.stringify(transformedPets)
     };
@@ -86,7 +137,4 @@ async function handler(event, context) {
       })
     };
   }
-}
-
-// Export with rate limiting: 100 requests per minute per IP
-export const handler = withRateLimit(handler, 100, 60000);
+};
