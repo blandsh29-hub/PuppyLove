@@ -1,0 +1,8 @@
+{
+  "name": "puppylove-backend",
+  "version": "1.0.0",
+  "description": "PuppyLove serverless backend",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  }
+}
