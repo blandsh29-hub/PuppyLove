@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#00474f">
+    <title>PuppyLove - Adopt & PlayDate</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            /* PHTHALO GREEN COLOR SYSTEM */
+            --primary: 180 100% 25%;        /* Deep phthalo green */
+            --primary-light: 180 80% 35%;   /* Medium green */
+            --primary-lighter: 180 60% 45%; /* Light teal */
+            --primary-lightest: 180 40% 85%; /* Very light teal */
+            --accent: 175 70% 40%;          /* Teal accent */
+            --destructive: 0 75% 55%;       /* Red for delete */
+            --background: 180 20% 98%;      /* Off-white with green tint */
+            --foreground: 180 30% 10%;      /* Dark green-gray text */
+            --card: 0 0% 100%;              /* White cards */
+            --border: 180 20% 88%;          /* Light borders */
+            --muted: 180 15% 92%;           /* Muted backgrounds */
+            --muted-foreground: 180 10% 45%; /* Muted text */
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: hsl(var(--background));
+            color: hsl(var(--foreground));
+            overflow-x: hidden;
+        }
+        
+        #root {
+            width: 100%;
+            min-height: 100vh;
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-light)) 100%);
+            color: white;
+            font-size: 24px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-light)) 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 71, 79, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .card-hover {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px rgba(0, 71, 79, 0.15);
+        }
+
+        /* Smooth transitions */
+        * {
+            transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        button, input, select {
+            transition: all 0.2s ease;
+        }
+    </style>
+</head>
+<body>
+    <div id="root">
+        <div class="loading">🐾 Loading PuppyLove...</div>
+    </div>
+    
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <script>
+        function waitForReact() {
+            if (typeof React !== 'undefined' && typeof ReactDOM !== 'undefined') {
+                initApp();
+            } else {
+                setTimeout(waitForReact, 50);
+            }
+        }
+        
+        function initApp() {
+            const { useState, useEffect, useRef, createElement: h } = React;
+            
+            // Icon components
+            const Heart = (props) => h('svg', { 
+                width: props.size || 24, 
+                height: props.size || 24, 
+                viewBox: '0 0 24 24', 
+                fill: props.fill || 'none', 
+                stroke: props.color || 'currentColor', 
+                strokeWidth: 2,
+                style: props.style || {},
+                onClick: props.onClick
+            }, h('path', { d: 'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z' }));
+            
+            const X = (props) => h('svg', { 
+                width: props.size || 24, 
+                height: props.size || 24, 
+                viewBox: '0 0 24 24', 
+                fill: 'none', 
+                stroke: props.color || 'currentColor', 
+                strokeWidth: 2,
+                onClick: props.onClick
+            }, 
+                h('line', { x1: 18, y1: 6, x2: 6, y2: 18 }),
+                h('line', { x1: 6, y1: 6, x2: 18, y2: 18 })
+            );
+            
+            const Info = (props) => h('svg', { 
+                width: props.size || 24, 
+                height: props.size || 24, 
+                viewBox: '0 0 24 24', 
+                fill: 'none', 
+                stroke: props.color || 'currentColor', 
+                strokeWidth: 2,
+                onClick: props.onClick
+            },
+                h('circle', { cx: 12, cy: 12, r: 10 }),
+                h('line', { x1: 12, y1: 16, x2: 12, y2: 12 }),
+                h('line', { x1: 12, y1: 8, x2: 12.01, y2: 8 })
+            );
+            
+            const Share = (props) => h('svg', {
+                width: props.size || 24,
+                height: props.size || 24,
+                viewBox: '0 0 24 24',
+                fill: 'none',
+                stroke: props.color || 'currentColor',
+                strokeWidth: 2,
+                onClick: props.onClick
+            },
+                h('circle', { cx: 18, cy: 5, r: 3 }),
+                h('circle', { cx: 6, cy: 12, r: 3 }),
+                h('circle', { cx: 18, cy: 19, r: 3 }),
+                h('line', { x1: 8.59, y1: 13.51, x2: 15.42, y2: 17.49 }),
+                h('line', { x1: 15.41, y1: 6.51, x2: 8.59, y2: 10.49 })
+            );
+
+            const Filter = (props) => h('svg', {
+                width: props.size || 24,
+                height: props.size || 24,
+                viewBox: '0 0 24 24',
+                fill: 'none',
+                stroke: props.color || 'currentColor',
+                strokeWidth: 2,
+                onClick: props.onClick
+            },
+                h('polygon', { points: '22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3' })
+            );
+
+            const ChevronLeft = (props) => h('svg', { 
+                width: props.size || 24, 
+                height: props.size || 24, 
+                viewBox: '0 0 24 24', 
+                fill: 'none', 
+                stroke: props.color || 'currentColor', 
+                strokeWidth: 2,
+                onClick: props.onClick
+            }, h('polyline', { points: '15 18 9 12 15 6' }));
+
+            // ADOPTION PETS DATA
+            const adoptionPets = [
+              {
+                id: 1,
+                name: "Bella",
+                type: "dog",
+                breed: "Labrador Retriever Mix",
+                age: 2,
+                size: "large",
+                distance: "2 miles",
+                image: "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=800&q=80",
+                description: "Bella is sweet and energetic! Loves swimming and fetch. House-trained and great with kids.",
+                traits: ["House-trained", "Good with kids", "Loves water", "Active"],
+                shelter: "Virginia Beach SPCA",
+                phone: "(757) 427-0070",
+                address: "3040 Holland Rd, Virginia Beach, VA",
+                fee: "$150"
+              },
+              {
+                id: 2,
+                name: "Max",
+                type: "dog",
+                breed: "German Shepherd",
+                age: 3,
+                size: "large",
+                distance: "8 miles",
+                image: "https://images.unsplash.com/photo-1568572933382-74d440642117?w=800&q=80",
+                description: "Loyal and intelligent. Knows commands and walks beautifully on leash.",
+                traits: ["Trained", "Loyal", "Smart", "Needs experienced owner"],
+                shelter: "Norfolk Animal Care",
+                phone: "(757) 441-5505",
+                address: "5585 Sabre Rd, Norfolk, VA",
+                fee: "$125"
+              },
+              {
+                id: 3,
+                name: "Whiskers",
+                type: "cat",
+                breed: "Domestic Shorthair",
+                age: 1,
+                size: "small",
+                distance: "5 miles",
+                image: "https://images.unsplash.com/photo-1574158622682-e40e69881006?w=800&q=80",
+                description: "Playful kitten who loves toys and cuddles. Perfect lap cat!",
+                traits: ["Playful", "Affectionate", "Indoor", "Litter trained"],
+                shelter: "Virginia Beach SPCA",
+                phone: "(757) 427-0070",
+                address: "3040 Holland Rd, Virginia Beach, VA",
+                fee: "$75"
+              },
+              {
+                id: 4,
+                name: "Luna",
+                type: "dog",
+                breed: "Pit Bull Mix",
+                age: 1,
+                size: "medium",
+                distance: "12 miles",
+                image: "https://images.unsplash.com/photo-1600804931749-2da4ce26c869?w=800&q=80",
+                description: "Total sweetheart! Loves cuddles and toys. Great with other dogs!",
+                traits: ["Affectionate", "Playful", "Good with dogs", "Sweet"],
+                shelter: "Chesapeake Humane Society",
+                phone: "(757) 487-5017",
+                address: "800 S Military Hwy, Chesapeake, VA",
+                fee: "$100"
+              },
+              {
+                id: 5,
+                name: "Mittens",
+                type: "cat",
+                breed: "Tabby",
+                age: 8,
+                size: "small",
+                distance: "6 miles",
+                image: "https://images.unsplash.com/photo-1592194996308-7b43878e84a6?w=800&q=80",
+                description: "Calm senior cat looking for quiet home. Loves naps and gentle pets.",
+                traits: ["Calm", "Senior", "Quiet", "Independent"],
+                shelter: "Norfolk Animal Care",
+                phone: "(757) 441-5505",
+                address: "5585 Sabre Rd, Norfolk, VA",
+                fee: "$50"
+              }
+            ];
+
+            // PLAYDATE PROFILES DATA
+            const playdateProfiles = [
+              {
+                id: 101,
+                ownerName: "Sarah",
+                petName: "Charlie",
+                type: "dog",
+                breed: "Golden Retriever",
+                age: 2,
+                size: "large",
+                distance: "1.5 miles",
+                image: "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=800&q=80",
+                description: "Charlie loves beach walks and fetch! Looking for friendly dogs for weekend beach trips.",
+                traits: ["Beach walks", "Fetch", "Swimming", "Dog parks"],
+                personality: ["Friendly", "Energetic", "Social", "Loves water"],
+                availability: "Weekends",
+                ownerBio: "Hi! I'm Sarah and Charlie and I love exploring Virginia Beach!"
+              },
+              {
+                id: 102,
+                ownerName: "Mike",
+                petName: "Buddy",
+                type: "dog",
+                breed: "Beagle Mix",
+                age: 4,
+                size: "medium",
+                distance: "3 miles",
+                image: "https://images.unsplash.com/photo-1548199973-03cce0bbc87b?w=800&q=80",
+                description: "Buddy is chill and loves long walks. Great with all dogs!",
+                traits: ["Long walks", "Hiking", "Neighborhood walks", "Sniffing adventures"],
+                personality: ["Calm", "Friendly", "Easy-going", "Great with dogs"],
+                availability: "Evenings & Weekends",
+                ownerBio: "Looking for low-key walking partners for evening strolls!"
+              },
+              {
+                id: 103,
+                ownerName: "Emma",
+                petName: "Milo & Luna",
+                type: "cat",
+                breed: "Maine Coon & Siamese",
+                age: 3,
+                size: "large",
+                distance: "4 miles",
+                image: "https://images.unsplash.com/photo-1615789591457-74a63395c990?w=800&q=80",
+                description: "Indoor cats love visitors! Looking for cat parents to swap sitting or have playdates.",
+                traits: ["Indoor playdates", "Cat sitting swap", "Cat cafe meetups"],
+                personality: ["Playful", "Social", "Indoor only", "Loves toys"],
+                availability: "Flexible",
+                ownerBio: "Cat mom looking for other cat parents in the area!"
+              },
+              {
+                id: 104,
+                ownerName: "David",
+                petName: "Rocky",
+                type: "dog",
+                breed: "Boxer",
+                age: 1,
+                size: "large",
+                distance: "7 miles",
+                image: "https://images.unsplash.com/photo-1583511655826-05700d7f6f28?w=800&q=80",
+                description: "Rocky has tons of energy! Need high-energy dogs for running and dog park.",
+                traits: ["Running", "Dog park", "Agility", "High-energy play"],
+                personality: ["Very energetic", "Playful", "Athletic", "Loves running"],
+                availability: "Mornings",
+                ownerBio: "Runner looking for other active dog owners!"
+              },
+              {
+                id: 105,
+                ownerName: "Jessica",
+                petName: "Daisy",
+                type: "dog",
+                breed: "Corgi",
+                age: 5,
+                size: "small",
+                distance: "2 miles",
+                image: "https://images.unsplash.com/photo-1546527868-ccb7ee7dfa6a?w=800&q=80",
+                description: "Daisy is a senior girl who loves gentle walks and cafe patios.",
+                traits: ["Short walks", "Cafe patios", "Gentle play", "Lazy park days"],
+                personality: ["Calm", "Gentle", "Senior", "Loves snacks"],
+                availability: "Afternoons",
+                ownerBio: "Looking for low-key hangs with other senior dogs!"
+              }
+            ];
+
+            function PuppyLoveApp() {
+              const [mode, setMode] = useState('adopt');
+              const [currentIndex, setCurrentIndex] = useState(0);
+              const [favorites, setFavorites] = useState([]);
+              const [showDetails, setShowDetails] = useState(false);
+              const [showFavorites, setShowFavorites] = useState(false);
+              const [showFilters, setShowFilters] = useState(false);
+              const [dragStart, setDragStart] = useState(null);
+              const [dragOffset, setDragOffset] = useState(0);
+              
+              const [filters, setFilters] = useState({
+                type: 'all',
+                size: 'all',
+                age: 'all'
+              });
+
+              const currentData = mode === 'adopt' ? adoptionPets : playdateProfiles;
+              
+              const filteredData = currentData.filter(item => {
+                if (filters.type !== 'all' && item.type !== filters.type) return false;
+                if (filters.size !== 'all' && item.size !== filters.size) return false;
+                if (filters.age !== 'all') {
+                  if (filters.age === 'young' && item.age > 2) return false;
+                  if (filters.age === 'adult' && (item.age < 2 || item.age > 7)) return false;
+                  if (filters.age === 'senior' && item.age <= 7) return false;
+                }
+                return true;
+              });
+
+              const currentItem = filteredData[currentIndex];
+              const noMore = currentIndex >= filteredData.length;
+
+              const handleLike = () => {
+                if (!noMore) {
+                  setFavorites([...favorites, { ...currentItem, mode }]);
+                  setCurrentIndex(currentIndex + 1);
+                  setShowDetails(false);
+                }
+              };
+
+              const handlePass = () => {
+                if (!noMore) {
+                  setCurrentIndex(currentIndex + 1);
+                  setShowDetails(false);
+                }
+              };
+
+              const removeFavorite = (id) => {
+                setFavorites(favorites.filter(item => item.id !== id));
+              };
+
+              const handleTouchStart = (e) => setDragStart(e.touches[0].clientX);
+              
+              const handleTouchMove = (e) => {
+                if (dragStart !== null) setDragOffset(e.touches[0].clientX - dragStart);
+              };
+
+              const handleTouchEnd = () => {
+                if (Math.abs(dragOffset) > 100) {
+                  dragOffset > 0 ? handleLike() : handlePass();
+                }
+                setDragOffset(0);
+                setDragStart(null);
+              };
+
+              const handleShare = () => {
+                if (currentItem) {
+                  const text = mode === 'adopt' 
+                    ? `Check out ${currentItem.name} on PuppyLove! A ${currentItem.breed} looking for a home.`
+                    : `Meet ${currentItem.petName} and ${currentItem.ownerName} on PuppyLove PlayDate!`;
+                  
+                  if (navigator.share) {
+                    navigator.share({ title: 'PuppyLove', text });
+                  } else {
+                    navigator.clipboard.writeText(text).then(() => alert('Link copied to clipboard!'));
+                  }
+                }
+              };
+
+              const switchMode = (newMode) => {
+                setMode(newMode);
+                setCurrentIndex(0);
+                setShowDetails(false);
+              };
+
+              // Filter Panel
+              if (showFilters) {
+                return h('div', {
+                  style: {
+                    width: '100%',
+                    maxWidth: '480px',
+                    margin: '0 auto',
+                    minHeight: '100vh',
+                    background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-light)) 100%)',
+                    padding: '20px'
+                  }
+                },
+                  h('div', { style: { background: 'white', borderRadius: '20px', padding: '24px' } },
+                    h('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' } },
+                      h('h2', { style: { margin: 0, fontSize: '24px', color: 'hsl(var(--primary))' } }, 'Filters'),
+                      h('button', {
+                        onClick: () => setShowFilters(false),
+                        style: { background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px', color: 'hsl(var(--muted-foreground))' }
+                      }, '✕')
+                    ),
+                    
+                    h('div', { style: { marginBottom: '24px' } },
+                      h('h3', { style: { fontSize: '16px', marginBottom: '12px', color: 'hsl(var(--primary))', fontWeight: '600' } }, 'Pet Type'),
+                      h('div', { style: { display: 'flex', gap: '8px' } },
+                        ['all', 'dog', 'cat'].map(type =>
+                          h('button', {
+                            key: type,
+                            onClick: () => setFilters({...filters, type}),
+                            className: 'btn-filter',
+                            style: {
+                              flex: 1,
+                              padding: '10px',
+                              border: filters.type === type ? '2px solid hsl(var(--primary))' : '2px solid hsl(var(--border))',
+                              borderRadius: '10px',
+                              background: filters.type === type ? 'hsl(var(--primary-lightest))' : 'white',
+                              color: 'hsl(var(--primary))',
+                              cursor: 'pointer',
+                              fontWeight: filters.type === type ? '600' : '400',
+                              fontSize: '14px'
+                            }
+                          }, type === 'all' ? 'All' : type.charAt(0).toUpperCase() + type.slice(1))
+                        )
+                      )
+                    ),
+                    
+                    h('div', { style: { marginBottom: '24px' } },
+                      h('h3', { style: { fontSize: '16px', marginBottom: '12px', color: 'hsl(var(--primary))', fontWeight: '600' } }, 'Size'),
+                      h('div', { style: { display: 'flex', gap: '8px' } },
+                        ['all', 'small', 'medium', 'large'].map(size =>
+                          h('button', {
+                            key: size,
+                            onClick: () => setFilters({...filters, size}),
+                            style: {
+                              flex: 1,
+                              padding: '10px',
+                              border: filters.size === size ? '2px solid hsl(var(--primary))' : '2px solid hsl(var(--border))',
+                              borderRadius: '10px',
+                              background: filters.size === size ? 'hsl(var(--primary-lightest))' : 'white',
+                              color: 'hsl(var(--primary))',
+                              cursor: 'pointer',
+                              fontWeight: filters.size === size ? '600' : '400',
+                              fontSize: '13px'
+                            }
+                          }, size.charAt(0).toUpperCase() + size.slice(1))
+                        )
+                      )
+                    ),
+                    
+                    h('div', { style: { marginBottom: '24px' } },
+                      h('h3', { style: { fontSize: '16px', marginBottom: '12px', color: 'hsl(var(--primary))', fontWeight: '600' } }, 'Age'),
+                      h('div', { style: { display: 'flex', gap: '8px' } },
+                        ['all', 'young', 'adult', 'senior'].map(age =>
+                          h('button', {
+                            key: age,
+                            onClick: () => setFilters({...filters, age}),
+                            style: {
+                              flex: 1,
+                              padding: '10px',
+                              border: filters.age === age ? '2px solid hsl(var(--primary))' : '2px solid hsl(var(--border))',
+                              borderRadius: '10px',
+                              background: filters.age === age ? 'hsl(var(--primary-lightest))' : 'white',
+                              color: 'hsl(var(--primary))',
+                              cursor: 'pointer',
+                              fontWeight: filters.age === age ? '600' : '400',
+                              fontSize: '13px'
+                            }
+                          }, age.charAt(0).toUpperCase() + age.slice(1))
+                        )
+                      )
+                    ),
+                    
+                    h('button', {
+                      onClick: () => {
+                        setFilters({ type: 'all', size: 'all', age: 'all' });
+                        setCurrentIndex(0);
+                      },
+                      style: {
+                        width: '100%',
+                        padding: '12px',
+                        border: 'none',
+                        borderRadius: '10px',
+                        background: 'hsl(var(--muted))',
+                        color: 'hsl(var(--primary))',
+                        cursor: 'pointer',
+                        fontWeight: '600',
+                        marginBottom: '12px'
+                      }
+                    }, 'Reset Filters'),
+                    
+                    h('button', {
+                      onClick: () => {
+                        setShowFilters(false);
+                        setCurrentIndex(0);
+                      },
+                      className: 'btn-primary',
+                      style: {
+                        width: '100%',
+                        padding: '14px',
+                        fontSize: '16px'
+                      }
+                    }, 'Apply Filters')
+                  )
+                );
+              }
+
+              // Favorites View
+              if (showFavorites) {
+                return h('div', {
+                  style: {
+                    width: '100%',
+                    maxWidth: '480px',
+                    margin: '0 auto',
+                    minHeight: '100vh',
+                    background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-light)) 100%)'
+                  }
+                },
+                  h('div', { style: { background: 'white', padding: '16px', display: 'flex', alignItems: 'center', gap: '12px' } },
+                    h('button', {
+                      onClick: () => setShowFavorites(false),
+                      style: { background: 'none', border: 'none', cursor: 'pointer', padding: '8px' }
+                    }, h(ChevronLeft, { size: 24, color: 'hsl(var(--primary))' })),
+                    h('h2', { style: { margin: 0, fontSize: '20px', flex: 1, color: 'hsl(var(--primary))' } }, 'Your Favorites ❤️'),
+                    h('span', {
+                      style: {
+                        background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-light)) 100%)',
+                        color: 'white',
+                        padding: '6px 12px',
+                        borderRadius: '20px',
+                        fontSize: '14px',
+                        fontWeight: '600'
+                      }
+                    }, favorites.length)
+                  ),
+                  h('div', { style: { padding: '16px' } },
+                    favorites.length === 0 ?
+                      h('div', { style: { background: 'white', borderRadius: '16px', padding: '60px 20px', textAlign: 'center' } },
+                        h(Heart, { size: 64, color: 'hsl(var(--muted))' }),
+                        h('h3', { style: { fontSize: '20px', marginTop: '20px', marginBottom: '12px' } }, 'No favorites yet'),
+                        h('p', { style: { color: 'hsl(var(--muted-foreground))' } }, 'Start swiping!')
+                      ) :
+                      favorites.map(item =>
+                        h('div', {
+                          key: item.id,
+                          className: 'card-hover',
+                          style: { background: 'white', borderRadius: '20px', marginBottom: '16px', overflow: 'hidden' }
+                        },
+                          h('div', { style: { position: 'relative' } },
+                            h('img', { src: item.image, alt: item.name || item.petName, style: { width: '100%', height: '220px', objectFit: 'cover' } }),
+                            h('div', {
+                              style: {
+                                position: 'absolute',
+                                top: '12px',
+                                left: '12px',
+                                background: item.mode === 'adopt' ? 'hsl(var(--primary))' : 'hsl(var(--accent))',
+                                color: 'white',
+                                padding: '6px 12px',
+                                borderRadius: '20px',
+                                fontSize: '12px',
+                                fontWeight: '600'
+                              }
+                            }, item.mode === 'adopt' ? '🐾 Adopt' : '🎾 PlayDate'),
+                            h('button', {
+                              onClick: () => removeFavorite(item.id),
+                              style: {
+                                position: 'absolute',
+                                top: '12px',
+                                right: '12px',
+                                background: 'white',
+                                border: 'none',
+                                borderRadius: '50%',
+                                width: '40px',
+                                height: '40px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }
+                            }, h(X, { size: 20, color: 'hsl(var(--destructive))' }))
+                          ),
+                          h('div', { style: { padding: '20px' } },
+                            h('h3', { style: { margin: '0 0 8px 0', fontSize: '24px' } }, 
+                              item.mode === 'adopt' ? item.name : `${item.petName} & ${item.ownerName}`
+                            ),
+                            h('p', { style: { margin: '0 0 16px 0', color: 'hsl(var(--muted-foreground))' } }, 
+                              `${item.breed} • ${item.age} years`
+                            ),
+                            item.mode === 'adopt' && h('div', { style: { background: 'hsl(var(--muted))', padding: '12px', borderRadius: '8px' } },
+                              h('p', { style: { margin: '0', fontWeight: '600', fontSize: '14px' } }, item.shelter),
+                              h('p', { style: { margin: '4px 0 0 0', fontSize: '13px', color: 'hsl(var(--muted-foreground))' } }, item.phone)
+                            )
+                          )
+                        )
+                      )
+                  )
+                );
+              }
+
+              // Main Swipe View
+              return h('div', {
+                style: {
+                  width: '100%',
+                  maxWidth: '480px',
+                  margin: '0 auto',
+                  minHeight: '100vh',
+                  background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-light)) 100%)',
+                  display: 'flex',
+                  flexDirection: 'column'
+                }
+              },
+                // Header
+                h('div', { style: { background: 'white', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' } },
+                  h('h1', {
+                    style: {
+                      margin: 0,
+                      fontSize: '28px',
+                      background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-light)) 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      fontWeight: 'bold'
+                    }
+                  }, '🐾 PuppyLove'),
+                  h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } },
+                    h('button', {
+                      onClick: () => setShowFilters(true),
+                      style: {
+                        background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-light)) 100%)',
+                        border: 'none',
+                        borderRadius: '50%',
+                        width: '40px',
+                        height: '40px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }
+                    }, h(Filter, { size: 20, color: 'white' })),
+                    h('button', {
+                      onClick: () => setShowFavorites(true),
+                      className: 'btn-primary',
+                      style: {
+                        borderRadius: '24px',
+                        padding: '10px 20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px'
+                      }
+                    }, 
+                      h(Heart, { size: 18, fill: 'white', color: 'white' }), 
+                      favorites.length > 0 ? favorites.length : ''
+                    )
+                  )
+                ),
+                
+                // Mode Toggle
+                h('div', {
+                  style: {
+                    display: 'flex',
+                    gap: '8px',
+                    background: 'rgba(255,255,255,0.9)',
+                    padding: '8px',
+                    borderRadius: '25px',
+                    margin: '16px 16px 12px'
+                  }
+                },
+                  h('button', {
+                    onClick: () => switchMode('adopt'),
+                    style: {
+                      flex: 1,
+                      padding: '12px',
+                      border: 'none',
+                      borderRadius: '20px',
+                      background: mode === 'adopt' ? 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-light)) 100%)' : 'transparent',
+                      color: mode === 'adopt' ? 'white' : 'hsl(var(--primary))',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      fontSize: '15px'
+                    }
+                  }, '🐾 Adopt'),
+                  h('button', {
+                    onClick: () => switchMode('playdate'),
+                    style: {
+                      flex: 1,
+                      padding: '12px',
+                      border: 'none',
+                      borderRadius: '20px',
+                      background: mode === 'playdate' ? 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary-light)) 100%)' : 'transparent',
+                      color: mode === 'playdate' ? 'white' : 'hsl(var(--primary))',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      fontSize: '15px'
+                    }
+                  }, '🎾 PlayDate')
+                ),
+                
+                // Sponsor Banner
+                h('div', {
+                  style: {
+                    background: 'white',
+                    margin: '0 16px 12px',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    textAlign: 'center',
+                    fontSize: '11px',
+                    color: 'hsl(var(--muted-foreground))'
+                  }
+                }, 'SPONSORED BY: Chewy • Purina • PetSmart'),
+                
+                // Card Area
+                h('div', { style: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', minHeight: '600px' } },
+                  noMore ?
+                    h('div', { style: { background: 'white', borderRadius: '24px', padding: '50px 30px', textAlign: 'center', alignSelf: 'center', maxWidth: '400px' } },
+                      h('div', { style: { fontSize: '64px', marginBottom: '20px' } }, '🎉'),
+                      h('h2', { style: { fontSize: '26px', marginBottom: '12px' } }, "That's everyone!"),
+                      h('button', {
+                        onClick: () => setCurrentIndex(0),
+                        className: 'btn-primary',
+                        style: { marginTop: '20px' }
+                      }, 'Start Over')
+                    ) :
+                    h('div', {
+                      onTouchStart: handleTouchStart,
+                      onTouchMove: handleTouchMove,
+                      onTouchEnd: handleTouchEnd,
+                      style: {
+                        width: '100%',
+                        maxWidth: '440px',
+                        height: '600px',
+                        background: 'white',
+                        borderRadius: '24px',
+                        overflow: 'hidden',
+                        boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
+                        transform: `translateX(${dragOffset}px) rotate(${dragOffset / 20}deg)`,
+                        transition: dragStart === null ? 'transform 0.3s ease' : 'none',
+                        position: 'relative',
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }
+                    },
+                      dragOffset > 50 && h('div', {
+                        style: {
+                          position: 'absolute',
+                          top: '30px',
+                          left: '30px',
+                          background: 'rgba(0, 167, 150, 0.95)',
+                          color: 'white',
+                          padding: '16px 28px',
+                          borderRadius: '12px',
+                          fontWeight: 'bold',
+                          fontSize: '22px',
+                          zIndex: 10,
+                          transform: 'rotate(-20deg)'
+                        }
+                      }, 'LIKE ❤️'),
+                      dragOffset < -50 && h('div', {
+                        style: {
+                          position: 'absolute',
+                          top: '30px',
+                          right: '30px',
+                          background: 'rgba(255, 68, 88, 0.95)',
+                          color: 'white',
+                          padding: '16px 28px',
+                          borderRadius: '12px',
+                          fontWeight: 'bold',
+                          fontSize: '22px',
+                          zIndex: 10,
+                          transform: 'rotate(20deg)'
+                        }
+                      }, 'PASS ✕'),
+                      
+                      h('div', {
+                        style: {
+                          position: 'absolute',
+                          top: '12px',
+                          left: '12px',
+                          background: mode === 'adopt' ? 'hsl(var(--primary))' : 'hsl(var(--accent))',
+                          color: 'white',
+                          padding: '8px 16px',
+                          borderRadius: '20px',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          zIndex: 5
+                        }
+                      }, mode === 'adopt' ? '🐾 Adopt' : '🎾 PlayDate'),
+                      
+                      h('div', { style: { position: 'relative', height: '450px', flexShrink: 0 } },
+                        h('img', { src: currentItem.image, alt: currentItem.name || currentItem.petName, style: { width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center' } }),
+                        h('div', { style: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '150px', background: 'linear-gradient(to top, rgba(0,0,0,0.7), transparent)' } }),
+                        h('button', {
+                          onClick: handleShare,
+                          style: {
+                            position: 'absolute',
+                            top: '16px',
+                            right: '16px',
+                            background: 'rgba(255,255,255,0.9)',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '48px',
+                            height: '48px',
+                            cursor: 'pointer',
+                            zIndex: 5,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }
+                        }, h(Share, { size: 22, color: 'hsl(var(--primary))' })),
+                        h('button', {
+                          onClick: () => setShowDetails(!showDetails),
+                          style: {
+                            position: 'absolute',
+                            bottom: '16px',
+                            right: '16px',
+                            background: 'white',
+                            border: 'none',
+                            borderRadius: '50%',
+                            width: '52px',
+                            height: '52px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }
+                        }, h(Info, { size: 26, color: 'hsl(var(--primary))' })),
+                        h('div', { style: { position: 'absolute', bottom: '20px', left: '20px', color: 'white' } },
+                          h('h2', { style: { margin: '0 0 4px 0', fontSize: '32px', fontWeight: 'bold', textShadow: '0 2px 8px rgba(0,0,0,0.8)' } }, 
+                            mode === 'adopt' ? currentItem.name : `${currentItem.petName} & ${currentItem.ownerName}`
+                          ),
+                          h('p', { style: { margin: 0, fontSize: '16px', textShadow: '0 2px 8px rgba(0,0,0,0.8)' } }, 
+                            `${currentItem.breed} • ${currentItem.age} years`
+                          )
+                        )
+                      ),
+                      h('div', { style: { padding: '24px', flexShrink: 0 } },
+                        h('p', { style: { margin: '0 0 16px 0', color: 'hsl(var(--muted-foreground))', fontSize: '14px' } }, `${currentItem.distance} away • ${currentItem.size}`),
+                        showDetails && h('div', { style: { paddingTop: '16px', borderTop: '1px solid hsl(var(--border))' } },
+                          h('p', { style: { color: 'hsl(var(--foreground))', marginBottom: '16px', lineHeight: '1.6' } }, currentItem.description),
+                          mode === 'adopt' ?
+                            h('div', {},
+                              h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' } },
+                                ...currentItem.traits.map(trait => h('span', { 
+                                  key: trait, 
+                                  style: { 
+                                    background: 'hsl(var(--primary-lightest))', 
+                                    padding: '6px 12px', 
+                                    borderRadius: '16px', 
+                                    fontSize: '12px', 
+                                    color: 'hsl(var(--primary))',
+                                    border: '1px solid hsl(var(--primary-lighter))'
+                                  } 
+                                }, trait))
+                              ),
+                              h('div', { style: { background: 'hsl(var(--muted))', padding: '12px', borderRadius: '8px' } },
+                                h('p', { style: { margin: '0 0 4px 0', fontWeight: '600', fontSize: '14px' } }, currentItem.shelter),
+                                h('p', { style: { margin: '0 0 4px 0', fontSize: '13px', color: 'hsl(var(--muted-foreground))' } }, currentItem.phone),
+                                h('p', { style: { margin: '0', fontSize: '13px', color: 'hsl(var(--muted-foreground))' } }, currentItem.address)
+                              )
+                            ) :
+                            h('div', {},
+                              h('p', { style: { fontSize: '14px', color: 'hsl(var(--muted-foreground))', marginBottom: '12px', fontStyle: 'italic' } }, `"${currentItem.ownerBio}"`),
+                              h('h4', { style: { fontSize: '14px', color: 'hsl(var(--primary))', marginBottom: '8px', fontWeight: '600' } }, 'Activities'),
+                              h('div', { style: { display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' } },
+                                ...currentItem.traits.map(act => h('span', { 
+                                  key: act, 
+                                  style: { background: 'hsl(var(--primary-lightest))', padding: '6px 12px', borderRadius: '16px', fontSize: '12px', color: 'hsl(var(--primary))' } 
+                                }, act))
+                              ),
+                              h('p', { style: { fontSize: '13px', color: 'hsl(var(--muted-foreground))' } }, `Available: ${currentItem.availability}`)
+                            )
+                        )
+                      )
+                    )
+                ),
+                !noMore && h('div', { style: { display: 'flex', justifyContent: 'center', gap: '28px', padding: '28px 20px', background: 'rgba(255,255,255,0.1)' } },
+                  h('button', {
+                    onClick: handlePass,
+                    style: {
+                      background: 'white',
+                      border: '3px solid hsl(var(--destructive))',
+                      borderRadius: '50%',
+                      width: '70px',
+                      height: '70px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }
+                  }, h(X, { size: 36, color: 'hsl(var(--destructive))' })),
+                  h('button', {
+                    onClick: handleLike,
+                    className: 'btn-primary',
+                    style: {
+                      borderRadius: '50%',
+                      width: '80px',
+                      height: '80px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }
+                  }, h(Heart, { size: 40, color: 'white', fill: 'white' }))
+                )
+              );
+            }
+
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(h(PuppyLoveApp));
+        }
+        
+        waitForReact();
+    </script>
+</body>
+</html>
