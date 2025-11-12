@@ -1,97 +1,92 @@
-// netlify/functions/pets.js
-// API endpoint for fetching pets with filters
-
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js';
+import { withRateLimit } from './rateLimit.js';
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-exports.handler = async (event, context) => {
-  // CORS headers
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Content-Type': 'application/json'
-  };
-
-  // Handle preflight
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers, body: '' };
+async function handler(event, context) {
+  // Only allow GET requests
+  if (event.httpMethod !== 'GET') {
+    return {
+      statusCode: 405,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Method Not Allowed' })
+    };
   }
 
   try {
-    const { species, size, age } = event.queryStringParameters || {};
-    
-    let query = supabase
+    // Fetch pets with shelter information
+    const { data: pets, error } = await supabase
       .from('pets')
       .select(`
         *,
-        shelters (
+        shelter:shelters (
           name,
           phone,
           address,
-          city,
-          state
+          email
         )
       `)
       .eq('status', 'available')
       .order('created_at', { ascending: false });
 
-    // Apply filters
-    if (species) {
-      query = query.eq('type', species.toLowerCase());
+    if (error) {
+      console.error('Supabase error:', error);
+      return {
+        statusCode: 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          error: 'Failed to fetch pets',
+          message: 'Database error occurred'
+        })
+      };
     }
 
-    if (size) {
-      query = query.eq('size', size.toLowerCase());
-    }
-
-    if (age) {
-      if (age === 'young') {
-        query = query.lte('age', 2);
-      } else if (age === 'adult') {
-        query = query.gte('age', 2).lte('age', 7);
-      } else if (age === 'senior') {
-        query = query.gt('age', 7);
-      }
-    }
-
-    const { data, error } = await query;
-
-    if (error) throw error;
-
-    // Transform data to match frontend format
-    const pets = data.map(pet => ({
+    // Transform data for frontend
+    const transformedPets = pets.map(pet => ({
       id: pet.id,
       name: pet.name,
       type: pet.type,
       breed: pet.breed,
       age: pet.age,
       size: pet.size,
-      distance: `${pet.distance} miles`,
-      image: pet.image_url,
       description: pet.description,
-      traits: pet.traits,
-      shelter: pet.shelters.name,
-      phone: pet.shelters.phone,
-      address: `${pet.shelters.address}, ${pet.shelters.city}, ${pet.shelters.state}`,
-      fee: `$${pet.adoption_fee}`
+      traits: pet.traits || [],
+      image: pet.image_url,
+      image_url: pet.image_url,
+      distance: `${pet.distance} miles`,
+      fee: `$${pet.adoption_fee}`,
+      adoption_fee: pet.adoption_fee,
+      status: pet.status,
+      shelter: pet.shelter?.name || 'Unknown Shelter',
+      phone: pet.shelter?.phone || '',
+      address: pet.shelter?.address || '',
+      email: pet.shelter?.email || ''
     }));
 
     return {
       statusCode: 200,
-      headers,
-      body: JSON.stringify(pets)
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=300' // Cache for 5 minutes
+      },
+      body: JSON.stringify(transformedPets)
     };
 
   } catch (error) {
-    console.error('Error fetching pets:', error);
+    console.error('Unexpected error:', error);
     return {
       statusCode: 500,
-      headers,
-      body: JSON.stringify({ error: 'Failed to fetch pets', message: error.message })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        error: 'Internal Server Error',
+        message: 'An unexpected error occurred'
+      })
     };
   }
-};
+}
+
+// Export with rate limiting: 100 requests per minute per IP
+export const handler = withRateLimit(handler, 100, 60000);
