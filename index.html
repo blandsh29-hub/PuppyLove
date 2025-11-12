@@ -6,6 +6,9 @@
     <meta name="theme-color" content="#00474f">
     <title>PuppyLove - Adopt & PlayDate</title>
     
+    <!-- Netlify Identity Widget -->
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -290,11 +293,35 @@
               const [loading, setLoading] = useState(true);
               const [error, setError] = useState(null);
               
+              // Auth state
+              const [user, setUser] = useState(null);
+              
               const [filters, setFilters] = useState({
                 type: 'all',
                 size: 'all',
                 age: 'all'
               });
+
+              // Initialize Netlify Identity
+              useEffect(() => {
+                const netlifyIdentity = window.netlifyIdentity;
+                
+                // Check for existing user
+                const currentUser = netlifyIdentity.currentUser();
+                if (currentUser) {
+                  setUser(currentUser);
+                }
+                
+                // Listen for auth events
+                netlifyIdentity.on('login', user => {
+                  setUser(user);
+                  netlifyIdentity.close();
+                });
+                
+                netlifyIdentity.on('logout', () => {
+                  setUser(null);
+                });
+              }, []);
 
               // Fetch adoption pets from API
               useEffect(() => {
@@ -657,7 +684,34 @@
                     }, 
                       h(Heart, { size: 18, fill: 'white', color: 'white' }), 
                       favorites.length > 0 ? favorites.length : ''
-                    )
+                    ),
+                    // User menu
+                    user ? 
+                      h('button', {
+                        onClick: () => window.netlifyIdentity.logout(),
+                        className: 'btn-primary',
+                        style: {
+                          borderRadius: '24px',
+                          padding: '10px 20px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '14px'
+                        }
+                      }, '👤 Logout')
+                    :
+                      h('button', {
+                        onClick: () => window.netlifyIdentity.open(),
+                        className: 'btn-primary',
+                        style: {
+                          borderRadius: '24px',
+                          padding: '10px 20px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          fontSize: '14px'
+                        }
+                      }, '👤 Login')
                   )
                 ),
                 
